@@ -3,13 +3,23 @@ import 'dart:ffi';
 
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:news_app/category.dart';
 import 'package:news_app/model_news.dart';
 
 import 'package:http/http.dart';
 import 'model_news.dart';
 
 
-final List<newsModel> filterNewsList = <newsModel>[];
+
+final List<newsModel> topheadlines = <newsModel>[];
+TextEditingController searchController = TextEditingController();
+int _current = 0;
+final CarouselController _controller = CarouselController();
+bool isLoading = true;
+
+// created a list of latestNewsList
+List<newsModel> latestNewsList = <newsModel>[];
+
 class home extends StatefulWidget {
   const home({super.key});
 
@@ -18,46 +28,62 @@ class home extends StatefulWidget {
 }
 
 class _homeState extends State<home> {
-  TextEditingController searchController = TextEditingController();
-  int _current = 0;
-  final CarouselController _controller = CarouselController();
-  bool isLoading = true;
-
-// created a list of latestNewsList
-  List<newsModel> latestNewsList = <newsModel>[];
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    getNews("latest");
+    getFilterNews("top-headlines");
+  }
 
   Future<void> getFilterNews(String filter) async {
     String url =
-        "https://newsapi.org/v2/$filter?country=in&apiKey=994e4b2b5eb943f6b19aea29fee7e611";
+        "https://newsapi.org/v2/$filter?country=in&apiKey=840643388dd0483f86cdc7084a265e53";
     Response res = await get(Uri.parse(url)); // import http library
     Map data = jsonDecode(res.body);
+
+    data["articles"].forEach((news) {
+      newsModel news_instance = new newsModel();
+      news_instance = newsModel.fromMap(news);
+      if (news_instance.newsImg.toString().isNotEmpty &&
+          topheadlines.length < 6) {
+        topheadlines.add(news_instance);
+      }
+    });
+
     setState(() {
-      data["articles"].forEach((news) {
-        newsModel news_instance = new newsModel();
-        news_instance = newsModel.fromMap(news);
-        if (news_instance.newsImg.toString().isNotEmpty &&
-            filterNewsList.length < 6) {
-          filterNewsList.add(news_instance);
-        }
-      });
+      isLoading = false;
     });
   }
 
+
+  
+
   void getNews(String query) async {
+    latestNewsList.clear();
     String url =
-        "https://newsapi.org/v2/everything?q=$query&from=2023-07-26&sortBy=publishedAt&apiKey=5c7fb3e4dcbf4d4d9caea9d60d3fd0a7";
+        "https://newsapi.org/v2/everything?q=$query&from=2023-07-26&sortBy=publishedAt&apiKey=840643388dd0483f86cdc7084a265e53";
     Response res = await get(Uri.parse(url)); // import http library
     Map data = jsonDecode(res.body);
-    setState(() {
-      data["articles"].forEach((news) {
-        newsModel news_instance = new newsModel();
-        news_instance = newsModel.fromMap(news);
-        if (news_instance.newsImg.toString().isNotEmpty &&
-            latestNewsList.length < 25) {
-          latestNewsList.add(news_instance);
-        }
-      });
+
+    data["articles"].forEach((news) {
+      newsModel news_instance = new newsModel();
+      news_instance = newsModel.fromMap(news);
+      if (news_instance.newsImg.toString().isNotEmpty &&
+          latestNewsList.length < 25) {
+        latestNewsList.add(news_instance);
+      }
     });
+
+    latestNewsList.reversed;
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void getCheck() {
+    print("handle called");
   }
 
   List<String> navbarItem = [
@@ -71,9 +97,9 @@ class _homeState extends State<home> {
   ];
   @override
   Widget build(BuildContext context) {
+    getCheck();
     TextEditingController searchController = TextEditingController();
-    getNews("latest");
-    getFilterNews("top-headlines");
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Noticias"),
@@ -95,6 +121,11 @@ class _homeState extends State<home> {
                     onTap: () {
                       String search = searchController.text;
                       if ((search.replaceAll(" ", "")) != "") {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    categoryNews(category: search)));
                       } else {}
                     },
                     child: Container(
@@ -111,6 +142,14 @@ class _homeState extends State<home> {
                       // enter button of the keyboard functionality is set by this method
                       onSubmitted: (value) {
                         // value we get from our text field
+                        String search = searchController.text;
+                        if ((search.replaceAll(" ", "")) != "") {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      categoryNews(category: search)));
+                        } else {}
                         print(value);
                       },
                       style: const TextStyle(
@@ -143,7 +182,11 @@ class _homeState extends State<home> {
                     // you have to return the widget of single entity
                     return InkWell(
                       onTap: () {
-                        print(navbarItem[index]);
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    categoryNews(category: navbarItem[index])));
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -171,7 +214,7 @@ class _homeState extends State<home> {
                 margin: const EdgeInsets.symmetric(vertical: 14, horizontal: 5),
                 child: CarouselSlider(
                   // carlos import dependency as well as library
-                  items: filterNewsList.map((item) {
+                  items: topheadlines.map((item) {
                     // items should have the widgets as thiss will ging to scroll in the widget
                     return Builder(builder: ((BuildContext context) {
                       // builder function
@@ -215,7 +258,7 @@ class _homeState extends State<home> {
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
-                                        children:  [
+                                        children: [
                                           Text(
                                             item.newsheadline.toString(),
                                             style: const TextStyle(
@@ -237,38 +280,12 @@ class _homeState extends State<home> {
                   }).toList(), // widget builder
                   carouselController: _controller, // controller
                   options: CarouselOptions(
-                      autoPlay: true,
-                      enlargeCenterPage: true,
-                      aspectRatio: 2.0,
-                      // scrollDirection: Axis.vertical, scroll direction set
-                      onPageChanged: (index, reason) {
-                        // function on on page changed
-                        setState(() {
-                          _current = index;
-                        });
-                      }),
+                    autoPlay: true,
+                    enlargeCenterPage: true,
+                    aspectRatio: 2.0,
+                    // scrollDirection: Axis.vertical, scroll direction set
+                  ),
                 ),
-              ),
-              Row(
-                // this code is related to the to that indiactor
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: filterNewsList.asMap().entries.map((entry) {
-                  return GestureDetector(
-                    onTap: () => _controller.animateToPage(entry.key),
-                    child: Container(
-                      width: 12.0,
-                      height: 12.0,
-                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                      decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: (Theme.of(context).brightness ==
-                                      Brightness.dark
-                                  ? Colors.white
-                                  : Colors.blueAccent)
-                              .withOpacity(_current == entry.key ? 0.9 : 0.4)),
-                    ),
-                  );
-                }).toList(),
               ),
               Container(
                 margin: const EdgeInsets.fromLTRB(15, 10, 8, 5),
@@ -385,7 +402,13 @@ class _homeState extends State<home> {
                           "Show More ",
                           style: TextStyle(color: Colors.black87),
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      categoryNews(category: "Latest News")));
+                        },
                         style: ElevatedButton.styleFrom(
                             // to give style to the button
                             // Set your desired background color
@@ -410,7 +433,7 @@ class _homeState extends State<home> {
 
 // () {}  () => things that will return by the function
 
-// final List<Widget> wid_build = filterNewsList
+// final List<Widget> wid_build = topheadlines
 //     .map((item) => Container(
 //             // this return a widget that get stored in the list
 //             child: Container(
