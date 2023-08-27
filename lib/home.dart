@@ -7,15 +7,15 @@ import 'package:news_app/category.dart';
 import 'package:news_app/model_news.dart';
 
 import 'package:http/http.dart';
+import 'package:news_app/newsView.dart';
 import 'model_news.dart';
-
-
 
 final List<newsModel> topheadlines = <newsModel>[];
 TextEditingController searchController = TextEditingController();
 int _current = 0;
 final CarouselController _controller = CarouselController();
 bool isLoading = true;
+bool isloading_head=true;
 
 // created a list of latestNewsList
 List<newsModel> latestNewsList = <newsModel>[];
@@ -32,7 +32,7 @@ class _homeState extends State<home> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    getNews("latest");
+    getNews("top-headlines");
     getFilterNews("top-headlines");
   }
 
@@ -51,18 +51,17 @@ class _homeState extends State<home> {
       }
     });
 
+    data_check(topheadlines);
+
     setState(() {
-      isLoading = false;
+      isloading_head = false;
     });
   }
-
-
-  
 
   void getNews(String query) async {
     latestNewsList.clear();
     String url =
-        "https://newsapi.org/v2/everything?q=$query&from=2023-07-26&sortBy=publishedAt&apiKey=840643388dd0483f86cdc7084a265e53";
+        "https://newsapi.org/v2/$query?country=in&apiKey=994e4b2b5eb943f6b19aea29fee7e611";
     Response res = await get(Uri.parse(url)); // import http library
     Map data = jsonDecode(res.body);
 
@@ -76,11 +75,46 @@ class _homeState extends State<home> {
     });
 
     latestNewsList.reversed;
-
+    data_check(latestNewsList);
     setState(() {
       isLoading = false;
     });
   }
+
+
+  void data_check(List<newsModel> NewsList){
+    NewsList.forEach((element) {
+      if (element.newsDes == null) {
+          element.newsDes="Tap to View More";
+        
+      }
+
+      if (element.newsImg == null) {
+          element.newsImg="https://images.unsplash.com/photo-1586339949916-3e9457bef6d3?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80";
+        
+      }
+
+      if (element.newsheadline == null) {
+          element.newsheadline="Big Breaking in the town";
+        
+      }
+
+      if (element.newsUrl == null) {
+          element.newsUrl="https://www.aajtak.in/";
+        
+      }
+
+    });
+  }
+
+ 
+
+  //   // i=0;
+  //   // using for loop for(element in data['articles']){
+  //   //        i++;
+  //   // }
+
+
 
   void getCheck() {
     print("handle called");
@@ -120,7 +154,7 @@ class _homeState extends State<home> {
                   GestureDetector(
                     onTap: () {
                       String search = searchController.text;
-                      if ((search.replaceAll(" ", "")) != "") {
+                      if ((search.replaceAll(" ", "")) != "" && search.isNotEmpty) {
                         Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -174,7 +208,7 @@ class _homeState extends State<home> {
               ),
               Container(
                 height: 50, // height have to be fixes
-                child: ListView.builder(
+                child:  ListView.builder(
                   shrinkWrap: true, // when you are in column always give true
                   scrollDirection: Axis.horizontal,
                   itemCount: navbarItem.length,
@@ -210,16 +244,23 @@ class _homeState extends State<home> {
                   },
                 ),
               ),
-              Container(
+               Container(
                 margin: const EdgeInsets.symmetric(vertical: 14, horizontal: 5),
-                child: CarouselSlider(
+                child:isloading_head ? Center(child: CircularProgressIndicator()) :  CarouselSlider(
                   // carlos import dependency as well as library
                   items: topheadlines.map((item) {
                     // items should have the widgets as thiss will ging to scroll in the widget
                     return Builder(builder: ((BuildContext context) {
                       // builder function
-                      return Container(
+                      return  Container(
                         child: InkWell(
+                          onTap: (){
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      newsView(url: item.newsUrl.toString())));
+                          },
                           child: Container(
                             child: Card(
                               shape: RoundedRectangleBorder(
@@ -308,84 +349,93 @@ class _homeState extends State<home> {
                 ),
               ),
               Container(
-                child: ListView.builder(
+                child: isLoading ?  CircularProgressIndicator(): ListView.builder(
                     shrinkWrap:
                         true, // while using builder inside a colum always used used shrink wrap
                     itemCount: latestNewsList.length,
                     physics: NeverScrollableScrollPhysics(),
                     itemBuilder: (context, index) {
-                      return Container(
-                        margin: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
-                        child: Card(
-                          elevation: 1.0,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(15)),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                // clipRrect is used to make image circle corners
-                                borderRadius: BorderRadius.circular(15),
-                                child: Image.network(
-                                  latestNewsList[index].newsImg.toString(),
-                                  fit: BoxFit.fitHeight,
-                                  height: 230,
-                                  width: double.infinity,
-                                ),
-                              ),
-                              Positioned(
-                                left:
-                                    0, // when left and right are both zero then the image is streched
-                                right: 0,
-                                bottom: 0,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(15),
-                                      gradient: LinearGradient(
-                                          colors: [
-                                            // if you want to apply transparency to a color, you can achieve this by creating a new color with a modified opacity.
-                                            Colors.black12.withOpacity(0),
-                                            Colors.black
-                                          ],
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter)),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(10, 15, 10, 8),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        latestNewsList[index]
-                                            .newsheadline
-                                            .toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold),
-                                      ),
-                                      Text(
-                                        latestNewsList[index]
-                                                    .newsDes
-                                                    .toString()
-                                                    .length >
-                                                50
-                                            ? latestNewsList[index]
-                                                    .newsDes
-                                                    .toString()
-                                                    .substring(0, 55) +
-                                                "... ... ..."
-                                            : latestNewsList[index]
-                                                .newsDes
-                                                .toString(),
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 12),
-                                      )
-                                    ],
+                      return InkWell(
+                        onTap: (){
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) =>
+                                      newsView(url: latestNewsList[index].newsUrl.toString())));
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 5),
+                          child: Card(
+                            elevation: 1.0,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15)),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  // clipRrect is used to make image circle corners
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Image.network(
+                                    latestNewsList[index].newsImg.toString(),
+                                    fit: BoxFit.fitHeight,
+                                    height: 230,
+                                    width: double.infinity,
                                   ),
                                 ),
-                              )
-                            ],
+                                Positioned(
+                                  left:
+                                      0, // when left and right are both zero then the image is streched
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(15),
+                                        gradient: LinearGradient(
+                                            colors: [
+                                              // if you want to apply transparency to a color, you can achieve this by creating a new color with a modified opacity.
+                                              Colors.black12.withOpacity(0),
+                                              Colors.black
+                                            ],
+                                            begin: Alignment.topCenter,
+                                            end: Alignment.bottomCenter)),
+                                    padding:
+                                        const EdgeInsets.fromLTRB(10, 15, 10, 8),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          latestNewsList[index]
+                                              .newsheadline
+                                              .toString(),
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                        Text(
+                                          latestNewsList[index]
+                                                      .newsDes
+                                                      .toString()
+                                                      .length >
+                                                  50
+                                              ? latestNewsList[index]
+                                                      .newsDes
+                                                      .toString()
+                                                      .substring(0, 55) +
+                                                  "... ... ..."
+                                              : latestNewsList[index]
+                                                  .newsDes
+                                                  .toString(),
+                                          style: const TextStyle(
+                                              color: Colors.white, fontSize: 12),
+                                        )
+                                      ],
+                                    ),
+                                  ),
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -393,7 +443,7 @@ class _homeState extends State<home> {
               ),
               Container(
                 padding: const EdgeInsets.fromLTRB(0, 10, 0, 5),
-                child: Row(
+                child: isLoading ? Container() : Row(
                   // row is created to keep the text at the starting
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -407,7 +457,7 @@ class _homeState extends State<home> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) =>
-                                      categoryNews(category: "Latest News")));
+                                      categoryNews(category: "top-headlines")));
                         },
                         style: ElevatedButton.styleFrom(
                             // to give style to the button
